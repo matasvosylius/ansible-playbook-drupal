@@ -1,0 +1,66 @@
+---
+- name: install mariadb repository
+  shell: curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash warn=False
+
+- name: install latest mariadb
+  package: name={{ item }} state=present
+  with_items:
+    - mariadb-server
+    - libmysqlclient-dev
+    - gcc
+    - python3-dev
+
+- name: install the latest pip
+  shell: curl https://bootstrap.pypa.io/get-pip.py | python3 warn=False
+
+- name: install python MySQL client
+  pip:
+    name:
+      - setuptools
+      - mysqlclient
+    state: latest
+
+- name: configure mariadb to bind to all addresses
+  lineinfile:
+    path: /etc/mysql/my.cnf
+    regexp: ^bind-address
+    line: bind-address = 0.0.0.0
+    state: present
+    backup: yes
+  notify:
+    - restart mariadb
+
+- name: update mysql root password for all root accounts
+  mysql_user: name=root host={{ item }} password={{ mysql_root_pass }}
+  with_items:
+   - 127.0.0.1
+   - ::1
+   - localhost
+
+- name: copy .my.cnf file with root password credentials
+  template:
+    src: my.cnf
+    dest: ~/.my.cnf
+    mode: 0600
+
+- name: service
+  service: name=mariadb state=started enabled=yes
+
+- meta: flush_handlers
+
+- name: ensure anonymous users are not in the database
+  mysql_user: name='' host={{ item }} state=absent
+  with_items:
+   - 127.0.0.1
+   - ::1
+   - localhost
+
+- name: remove the test database
+  mysql_db: name=test state=absent
+
+- name: create a new database for Drupal
+  mysql_db: name={{ drupal_db_name }} state=present
+
+- name: create a new database user for Drupal
+  mysql_user: name={{ drupal_db_user }}  password={{ drupal_db_pass }}
+                priv="{{ drupal_db_name }}.*:ALL" state=present host=127.0.0.1

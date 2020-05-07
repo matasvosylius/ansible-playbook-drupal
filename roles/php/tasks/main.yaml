@@ -1,0 +1,35 @@
+---
+- name: install php7.2 with all modules
+  package: name={{ item }} state=present
+  with_items:
+    - php7.2
+    - php7.2-curl
+    - php7.2-gd
+    - php7.2-cli
+    - php7.2-mysql
+    - php7.2-xml
+    - php7.2-mbstring
+    - php7.2-fpm
+    - php7.2-json
+    - php7.2-intl
+    - php7.2-zip
+
+- name: start and enable service
+  service: name=php7.2-fpm state=started enabled=yes
+
+- name: setting timezone in php.ini
+  lineinfile:
+    path: /etc/php/7.2/fpm/php.ini
+    regexp: ^;date.timezone or ^date.timezone
+    line: date.timezone = {{ date_timezone }}
+    state: present
+
+- name: setting timezone in php.ini
+  lineinfile:
+    path: /etc/php/7.2/fpm/php.ini
+    regexp: ^memory_limit
+    line: memory_limit = {{ memory_limit }}
+    state: present
+
+- name: restart php7.2-fpm
+  service: name=php7.2-fpm state=restarted

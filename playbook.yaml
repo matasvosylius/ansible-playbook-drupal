@@ -1,0 +1,25 @@
+---
+- hosts: all
+  connection: local
+  become: true 
+  gather_facts: true
+  tasks:
+  - name: update and upgrade system packages
+    apt:
+      upgrade: yes
+      update_cache: yes
+
+- hosts: all 
+  connection: local
+  become: true
+  roles:
+    - role: robertdebock.python_pip
+    - mariadb
+
+- hosts: all
+  connection: local
+  become: true
+  roles:
+    - php
+    - drupal
+    - nginx

@@ -1,0 +1,58 @@
+---
+- name: remove Apache web server
+  package: name=apache2 state=absent
+ 
+- name: install nginx web server
+  package: name=nginx state=present
+
+- name: add the certbot repository
+  apt_repository: repo='ppa:certbot/certbot' state=present update_cache=yes
+  when:
+    - letsencrypt_generate == true
+    - letsencrypt_domain is defined
+    - letsencrypt_email is defined
+
+- name: install certbot
+  package: name=python-certbot-nginx state=latest update_cache=yes
+  when:
+    - letsencrypt_generate == true
+    - letsencrypt_domain is defined
+    - letsencrypt_email is defined
+
+- name: start and enable nginx service
+  service: name=nginx state=started enabled=yes
+
+- name: generate letsencrypt certificates
+  shell: certbot certonly --nginx -d {{ letsencrypt_domain }} -n --agree-tos -m {{ letsencrypt_email }}
+  args:
+    creates: /etc/letsencrypt/live/{{ letsencrypt_domain }}
+  when:
+    - letsencrypt_generate == true
+    - letsencrypt_domain is defined
+    - letsencrypt_email is defined
+
+- name: remove default nginx configuration
+  file: name=/etc/nginx/sites-enabled/default state=absent
+  notify:
+    - restart nginx
+
+- name: generate a new configuration for Drupal
+  template:
+    src: drupal.conf
+    dest: /etc/nginx/sites-enabled/drupal.conf
+    owner: www-data
+    group: www-data
+  notify:
+    - restart nginx
+
+- name: configure the certbot cronjob
+  cron:
+    name: letsencrypt_renewal
+    special_time: weekly
+    job: /usr/bin/certbot renew --post-hook "systemctl reload nginx"
+  when:
+    - letsencrypt_generate == true
+    - letsencrypt_domain is defined
+    - letsencrypt_email is defined
+
+- meta: flush_handlers
