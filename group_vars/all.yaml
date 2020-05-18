@@ -12,7 +12,7 @@ memory_limit: 512M  # Modify according to available memory on your instance
 
 # Drupal Variables
 
-drupal_version: 8.5.10
+drupal_version: 8.6.9
 drupal_site_path: "/var/www/drupal"
 drupal_site_name: "Victim website :)"
 drupal_admin_username: admin
